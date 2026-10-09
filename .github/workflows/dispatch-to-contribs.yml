@@ -32,10 +32,14 @@ jobs:
         env:
           INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ -n "${INPUT_VERSION}" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             VERSION="${INPUT_VERSION}"
           else
             VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo '::error::Invalid version; expected format X.Y.Z'
+            exit 1
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Dispatching mellea-released event to contribs with version=${VERSION}"
@@ -59,5 +63,5 @@ jobs:
         run: |
           gh api repos/generative-computing/mellea-contribs/dispatches \
             --method POST \
-            --field event_type=mellea-released \
-            --field "client_payload[version]=${VERSION}"
+            --raw-field event_type=mellea-released \
+            --raw-field "client_payload[version]=${VERSION}"
